@@ -1,0 +1,18 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mongodb-ingress
+  namespace: mongodb-namespace
+spec:
+  rules:
+    # If you add the host, you must also add the hostname to /etc/hosts
+    - host: mongo-express.database
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: mongodb-express-service
+                port:
+                  number: 8081
