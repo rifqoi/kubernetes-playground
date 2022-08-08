@@ -1,0 +1,132 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    app: influxdb
+  name: influxdb-auth
+  namespace: influxdb
+type: Opaque
+data:
+  # Random alphanumeric 32 karakter dengan base64
+  # Contoh:
+  #   cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1
+  #     g71Kv9SUBnk7yqUQLw8UJV08jq3i4Vcl
+  #   echo -n 'g71Kv9SUBnk7yqUQLw8UJV08jq3i4Vcl' | base64
+  #     ZzcxS3Y5U1VCbms3eXFVUUx3OFVKVjA4anEzaTRWY2w=
+  admin-token: ZzcxS3Y5U1VCbms3eXFVUUx3OFVKVjA4anEzaTRWY2w=
+  # Ubah plaintext password ke bae64
+  # Contoh:
+  #   echo -n 'administrator' | base64
+  #       YWRtaW5pc3RyYXRvcg==
+  admin-password: YWRtaW5pc3RyYXRvcg==
+---
+# PDB Untuk menjaga jumlah replikasi
+# https://kubernetes.io/docs/concepts/workloads/pods/disruptions/#pod-disruption-budgets
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: influxdb
+  labels:
+    app: influxdb
+    namespace: influxdb
+spec:
+  minAvailable: 1
+  #    maxAvailable: 1
+  selector:
+    matchLabels:
+      app: influxdb
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: influxdb
+  name: influxdb
+  namespace: influxdb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: influxdb
+  serviceName: influxdb
+  template:
+    metadata:
+      labels:
+        app: influxdb
+    spec:
+      containers:
+        - image: influxdb:2.0.6
+          name: influxdb
+          ports:
+            - containerPort: 8086
+              name: influxdb
+          volumeMounts:
+            - mountPath: /var/lib/influxdb2
+              name: data
+          env:
+            - name: DOCKER_INFLUXDB_INIT_MODE
+              value: setup
+            - name: DOCKER_INFLUXDB_INIT_ORG
+              value: influxdata
+            - name: DOCKER_INFLUXDB_INIT_BUCKET
+              value: demo
+            - name: DOCKER_INFLUXDB_INIT_RETENTION
+              value: 12h
+            - name: DOCKER_INFLUXDB_INIT_USERNAME
+              value: admin
+            - name: DOCKER_INFLUXDB_INIT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: influxdb-auth
+                  key: admin-password
+            - name: DOCKER_INFLUXDB_INIT_ADMIN_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: influxdb-auth
+                  key: admin-token
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        namespace: influxdb
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: influxdb
+  namespace: influxdb
+spec:
+  type: ClusterIP
+  ports:
+    - name: influxdb
+      port: 8086
+      targetPort: 8086
+  selector:
+    app: influxdb
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: influxdb
+  namespace: influxdb
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+  labels:
+    name: influxdb
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /influxdb(/|$)(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: influxdb
+                port:
+                  number: 8086

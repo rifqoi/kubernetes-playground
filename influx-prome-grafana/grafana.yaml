@@ -1,0 +1,15 @@
+# Refer to this https://github.com/grafana/helm-charts/blob/main/charts/grafana/values.yaml
+grafana:
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: "nginx"
+      nginx.ingress.kubernetes.io/rewrite-target: /$2
+      nginx.ingress.kubernetes.io/use-regex: "true"
+
+    hosts: []
+    path: /grafana(/|$)(.*)
+
+  grafana.ini:
+    server:
+      root_url: "%(protocol)s://%(domain)s:%(http_port)s/grafana/"
