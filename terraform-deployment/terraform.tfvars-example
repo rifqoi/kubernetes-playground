@@ -1,0 +1,6 @@
+host =  "<INSERT-YOUR-HOSTNAME-HERE>"
+client_certificate = "<INSERT-YOUR-CERTIFICATE-HERE>"
+
+client_key = "<INSERT-YOUR-CLIENT-KEY-HERE>"
+
+cluster_ca_certificate = "<INSERT-YOUR-CA-CERT-HERE>"

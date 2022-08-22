@@ -1,0 +1,4 @@
+
+terraform-deployment/terraform.tfstate
+terraform-deployment/terraform.tfstate.backup
+terraform-deployment/terraform.tfvars
